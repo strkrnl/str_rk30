@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case $1 in
+deconfig)
+	ip link set dev ${interface} up
+	;;
+bound)
+	ip address add dev ${interface} ${ip}/${mask} broadcast ${broadcast}
+	ip route add default via ${router}
+	mkdir -p /etc
+	echo -n > /etc/resolv.conf
+	for server in ${dns}; do
+		echo nameserver ${server} >> /etc/resolv.conf
+	done
+	echo domain ${domain} >> /etc/resolv.conf
+	echo search ${domain} >> /etc/resolv.conf
+	;;
+esac

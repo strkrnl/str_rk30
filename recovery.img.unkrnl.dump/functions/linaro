@@ -1,0 +1,104 @@
+. /functions/common
+
+linaro_tarball()
+{
+	case "$1" in
+	alip)
+		wget -O - http://releases.linaro.org/13.08/ubuntu/raring-images/alip/linaro-raring-alip-20130826-474.tar.gz
+		;;
+	developer)
+		wget -O - http://releases.linaro.org/13.09/ubuntu/raring-images/developer/linaro-raring-developer-20130922-501.tar.gz
+		;;
+	nano)
+		wget -O - http://releases.linaro.org/13.09/ubuntu/raring-images/nano/linaro-raring-nano-20130922-501.tar.gz
+		;;
+	server)
+		wget -O - http://releases.linaro.org/13.09/ubuntu/raring-images/server/linaro-raring-server-20130922-501.tar.gz
+		;;
+	*)
+		cat $1
+		;;
+	esac
+}
+
+linaro_mkrootfs()
+{
+	rm -fr $2/binary
+	linaro_tarball $1 | tar -xpvzf - -C $2
+	rm -fr $2/linuxroot
+	mv $2/binary $2/linuxroot
+	cat << 'EOF' >> $2/linuxroot/etc/group
+net_bt_admin:x:3001:linaro
+net_bt:x:3002:linaro
+inet:x:3003:linaro
+net_raw:x:3004:linaro
+net_admin:x:3005:linaro
+net_bw_stats:x:3006:linaro
+net_bw_acct:x:3007:linaro
+net_bt_stack:x:3008:linaro
+EOF
+	cat << 'EOF' >> $2/linuxroot/etc/gshadow
+net_bt_admin:!::linaro
+net_bt:!::linaro
+inet:!::linaro
+net_raw:!::linaro
+net_admin:!::linaro
+net_bw_stats:!::linaro
+net_bw_acct:!::linaro
+net_bt_stack:!::linaro
+EOF
+}
+
+format()
+{
+	cat << 'EOF' | fdisk -u /dev/$1
+o
+n
+p
+1
+2048
+
+p
+w
+EOF
+	sleep 1
+	case "$1" in
+	mmcblk0)
+		mkfs.ext4 /dev/${1}p1
+		;;
+	sd[a-z])
+		mkfs.ext4 /dev/${1}1
+		;;
+	esac
+}
+
+linaro_install()
+{
+	case "$2" in
+	mmcblk0)
+		format $2
+		mount /dev/${2}p1 /newroot || return 1
+		;;
+	sd[a-z])
+		format $2
+		mount /dev/${2}1 /newroot || return 1
+		;;
+	mmcblk0p[0-9]*|sd[a-z][0-9]*)
+		mount /dev/$2 /newroot || return 1
+		;;
+	*)
+		mount /dev/block/mtd/by-name/$2 /newroot || return 1
+		;;
+	esac
+	linaro_mkrootfs $1 /newroot
+	umount /newroot
+
+	echo done.
+}
+
+linaro_start()
+{
+	mount -t tmpfs -o size=75% tmpfs /newroot || return 1
+	linaro_mkrootfs $1 /newroot
+	newroot /newroot/linuxroot /sbin/init
+}

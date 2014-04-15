@@ -1,0 +1,11 @@
+. /functions/common
+. /functions/linaro
+/bin/busybox mkdir /world
+mount -t ext4 -o rw /dev/mmcblk0p1 /world
+mount --move /sys /world/sys
+mount --move /proc /world/proc
+chroot /world && insmod /world/lib/modules/3.0.8+/8192cu.ko
+
+
+
+

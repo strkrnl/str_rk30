@@ -1,0 +1,40 @@
+#!/bin/busybox sh
+
+export PATH
+
+/bin/busybox mkdir -p /bin /dev/pts /mnt /newroot /proc /sbin /sys /usr
+/bin/busybox ln -s /bin /usr/bin
+/bin/busybox ln -s /sbin /usr/sbin
+/bin/busybox --install -s
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devpts devpts /dev/pts
+
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+mdev -s
+
+. /functions/rkinit
+. /functions/common
+
+sleep 5
+
+ENV=/functions/shinit
+export ENV
+#setsid cttyhack /bin/sh &
+fbterm -s 24 -- /bin/sh < /dev/tty1 &
+
+while true; do
+	if [ -e /newroot.exec ]; then
+		pkill .
+        	echo > /proc/sys/kernel/hotplug
+        	umount /proc
+        	umount /sys
+        	umount /dev/pts
+		. /newroot.exec
+	else
+		sleep 1
+	fi
+
+done
+

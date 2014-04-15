@@ -1,0 +1,10 @@
+newroot()
+{
+	if [ ! -x $1$2 ]; then
+		echo $1$2 is not executable
+		return 1
+	fi
+	mount --bind $1 $1
+        echo "exec switch_root $1 $2" > /newroot.exec
+	return 0
+}

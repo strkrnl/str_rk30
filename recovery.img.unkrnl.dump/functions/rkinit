@@ -1,0 +1,17 @@
+insmod fbcon.ko
+insmod font.ko
+insmod softcursor.ko
+insmod rk29-ipp.ko.`uname -r`
+insmod rk30xxnand_ko.ko.`uname -r`
+
+mkdir -p /dev/block/mtd/by-name
+for i in /sys/class/mtd/mtd[0-9]*/name; do
+	name=`cat ${i}`
+	i=${i##*mtd}
+	i=${i%/name}
+	ln -s /dev/mtdblock${i} /dev/block/mtd/by-name/${name}
+done
+
+for i in /sys/class/display/*/scale /sys/class/graphics/*/scale; do
+	echo 80 > ${i}
+done
